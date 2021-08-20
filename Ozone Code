@@ -1,0 +1,157 @@
+### Ozone Air Quality for San Antonio ###
+library(tidyverse)
+library(lubridate)
+library(chron)
+library(ggmap)
+library(ggrepel)
+## Map of San Antonio ##
+register_google(key = "", write = TRUE)
+map_satx <- get_map("San Antonio", zoom = 11,
+                    maptype = "terrain")
+map_satx
+ggmap(map_satx)
+
+## Locations of Sensors ##
+brooks_lat_long <- c(29.34473, -98.43567)
+downtown_lat_long <- c(29.4159, -98.48295)
+medcenter_lat_long <- c(29.51007, -98.58029)
+sensors <- data.frame(brooks_lat_long, downtown_lat_long, medcenter_lat_long)
+sensors
+Sensor_Name <- c("Brooks City Base", "Downtown", "Medical Center")
+Sensor_LAT <- c(29.34473, 29.4159, 29.51007)
+Sensor_LNG <- c(-98.43567, -98.48295, -98.58029)
+sensors <- data.frame(Sensor_Name, Sensor_LAT, Sensor_LNG)
+sensors
+
+## Plot the sensor locations on the map ##
+sensor_map <- ggmap(map_satx) +
+  geom_point(data = sensors, aes(x = Sensor_LNG, y = Sensor_LAT),
+             color = "black", cex = 5) +
+  xlab("Longitude") + ylab("Latitude") + ggtitle("SmartCity Sensor Locations") +
+  geom_text_repel(data = sensors, aes(x = Sensor_LNG, y = Sensor_LAT, label = Sensor_Name),
+                  nudge_x = .005, box.padding = .5, nudge_y = -.005, color = "red", size = 5)
+sensor_map
+sensor_map
+
+## Testing ##
+ggplot() +
+  geom_point(data = sensors, aes(x = Sensor_LNG, y = Sensor_LAT),
+             color = "black", cex = 5) +
+  xlab("Longitude") + ylab("Latitude") + ggtitle("SmartCity Sensor Locations") + 
+  geom_text_repel(data = sensors, aes(x = Sensor_LNG, y = Sensor_LAT, label = Sensor_Name))
+
+
+### Ozone Levels at Brooks, Downtown and Med Center ###
+cosa_brooks_sample <- COSA_Brooks_Air_Quality %>%
+  sample_n(250)
+View(cosa_brooks_sample)
+
+## Plot Ozone Levels ##
+cosa_brooks_test <- cosa_brooks_O3 %>%
+  filter(O3 > 0)
+View(cosa_brooks_test)
+
+ggplot(cosa_brooks_test, aes(DateTime, y = O3)) +
+  geom_point() + scale_x_datetime() +
+  ylim(-5, 85) +
+  geom_hline(yintercept = 70, color = "red") +
+  xlab("Date of Measurement") + ylab("Ozone Levels (ppb)") + 
+  labs(title = "Ozone Levels > 0 for Brooks City Sensor") 
+
+cosa_downtown_test <- COSA_Downtown_Air_Quality %>%
+  filter(O3 > 0)
+
+ggplot(cosa_downtown_test, aes(DateTime, y = O3)) +
+  geom_point() + scale_x_datetime() +
+  ylim(-5, 85) +
+  geom_hline(yintercept = 70, color = "red") +
+  xlab("Date of Measurement") + ylab("Ozone Levels (ppb)") + 
+  labs(title = "Ozone Levels > 0 for Downtown Sensor")
+
+cosa_med_center_test <- COSA_Medical_Center_Air_Quality %>%
+  filter(O3 > 0)
+
+ggplot(cosa_med_center_test, aes(DateTime, y = O3)) +
+  geom_point() + scale_x_datetime() +
+  ylim(-5, 85) +
+  geom_hline(yintercept = 70, color = "red") +
+  xlab("Date of Measurement") + ylab("Ozone Levels (ppb)") + 
+  labs(title = "Ozone Levels > 0 for Medical Center Sensor")
+
+
+ggplot(cosa_brooks_sample, aes(x = DateTime, y = O3)) +
+  geom_point() +
+  scale_x_datetime() +
+  ylim(-5, 80) +
+  geom_hline(yintercept = 70, color = "red") +
+  xlab("Date of Measurement") + ylab("Ozone Levels (ppb)") + 
+  labs(title = "Ozone Levels at Brooks City Sensor")
+
+cosa_downtown_sample <- COSA_Downtown_Air_Quality %>%
+  sample_n(250)
+ggplot(cosa_downtown_sample, aes(x = DateTime, y = O3)) +
+  geom_point() + 
+  scale_x_datetime() + 
+  ylim(-10, 100) +
+  geom_hline(yintercept = 70, color = "red") +
+  xlab("Date of Measurement") + ylab("Ozone Levels (ppb)") +
+  labs(title = "Ozone Levels at Downtown Sensor")
+
+cosa_medcenter_sample <- COSA_Medical_Center_Air_Quality %>%
+  sample_n(250)
+ggplot(cosa_medcenter_sample, aes(x = DateTime, y = O3)) +
+  geom_line() +
+  scale_x_datetime() +
+  ylim(-10, 100) +
+  geom_hline(yintercept = 70, color = "red") +
+  xlab("Date of Measurement") + ylab("Ozone Levels (ppb)") +
+  labs(title = "Ozone Levels at Medical Center Sensor")
+
+## How many times were O3 levels above EPA standard? ##
+cosa_brooks_O3 <- COSA_Brooks_Air_Quality %>%
+  select(DateTime, LAT, LONG, O3, AlertTriggered, SensorStatus)
+View(cosa_brooks_O3)
+
+cosa_brooks_O3 %>%
+  filter(AlertTriggered == "o3")
+
+cosa_brooks_O3 %>%
+  group_by(AlertTriggered)
+
+cosa_brooks_O3 %>% # How often O3 levels exceeded 70
+  count(O3 > 70)
+
+cosa_downtown_O3 <- COSA_Downtown_Air_Quality %>%
+  select(DateTime, LAT, LONG, O3, AlertTriggered, SensorStatus)
+
+cosa_downtown_O3 %>% # How often O3 levels exceeded 70 at Downtown sensor
+  count(O3 > 70)
+
+cosa_medcenter_O3 <- COSA_Medical_Center_Air_Quality %>%
+  select(DateTime, LAT, LONG, O3, AlertTriggered, SensorStatus)
+
+cosa_medcenter_O3 %>% # How often O3 levels exceeded 70 at MedCenter
+  count(O3 > 70)
+
+## Were alerts triggered for Ozone at these sensors? ##
+cosa_brooks_test %>%
+  count(AlertTriggered == "o3")
+
+cosa_downtown_test %>%
+  count(AlertTriggered == "o3")
+
+cosa_med_center_test %>%
+  count(AlertTriggered == "o3")
+
+## When were alerts triggered for Ozone? ##
+cosa_brooks_test %>%
+  select(DateTime, O3, AlertTriggered) %>%
+  filter(AlertTriggered == "o3")
+
+cosa_downtown_test %>%
+  select(DateTime, O3, AlertTriggered) %>%
+  filter(AlertTriggered == "o3")
+
+cosa_med_center_test %>%
+  select(DateTime, O3, AlertTriggered) %>%
+  filter(AlertTriggered == "o3")
